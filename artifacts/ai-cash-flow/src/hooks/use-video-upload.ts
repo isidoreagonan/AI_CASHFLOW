@@ -10,48 +10,6 @@ interface UseVideoUploadOptions {
   onError?: (error: Error) => void;
 }
 
-// Each chunk is sent as a separate small POST request — bypasses Replit proxy body-size limit
-const CHUNK_SIZE = 2 * 1024 * 1024; // 2 MB — well below the proxy limit
-const MAX_RETRIES = 3;
-
-async function sendChunk(
-  base: string,
-  token: string,
-  sessionId: string,
-  chunk: ArrayBuffer,
-  start: number,
-  retries = MAX_RETRIES
-): Promise<{ done: boolean; objectPath?: string; videoUrl?: string; uploadedBytes: number }> {
-  const attempt = async () => {
-    const response = await fetch(`${base}/api/storage/upload/chunk/${sessionId}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/octet-stream",
-        "X-Chunk-Start": String(start),
-        "Content-Length": String(chunk.byteLength),
-      },
-      body: chunk,
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `Erreur serveur chunk (${response.status})`);
-    }
-    return response.json();
-  };
-
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await attempt();
-    } catch (err) {
-      if (i === retries - 1) throw err;
-      // Wait before retry: 1s, 2s, 4s
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
-    }
-  }
-  throw new Error("Toutes les tentatives ont échoué");
-}
-
 export function useVideoUpload(options: UseVideoUploadOptions = {}) {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -70,52 +28,56 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
         const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
         const contentType = file.type || "video/mp4";
 
-        // Step 1 — Start the upload session (tiny JSON request, no size issue)
-        const startRes = await fetch(`${base}/api/storage/upload/start`, {
+        // Step 1: Request a signed upload URL from our backend
+        const reqRes = await fetch(`${base}/api/storage/uploads/request-url`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ contentType, totalSize: file.size }),
+          body: JSON.stringify({ name: file.name, contentType, size: file.size }),
         });
 
-        if (!startRes.ok) {
-          const err = await startRes.json().catch(() => ({}));
+        if (!reqRes.ok) {
+          const err = await reqRes.json().catch(() => ({}));
           throw new Error(err.error || "Impossible de démarrer l'upload");
         }
 
-        const { sessionId, objectPath, videoUrl } = await startRes.json();
-        setProgress(5);
+        const { uploadURL, token: uploadToken, objectPath, videoUrl } = await reqRes.json();
+        setProgress(10);
 
-        // Step 2 — Send the file in 2 MB chunks using file.slice() to avoid
-        // loading the entire file into memory (critical for large videos on mobile)
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-        let finalResult: UploadResult | null = null;
-
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * CHUNK_SIZE;
-          const end = Math.min(start + CHUNK_SIZE, file.size);
-          // .slice() returns a Blob — no memory spike, only this chunk is loaded
-          const chunk = await file.slice(start, end).arrayBuffer();
-
-          const result = await sendChunk(base, token, sessionId, chunk, start);
-
-          const pct = Math.round(((i + 1) / totalChunks) * 90) + 5;
-          setProgress(Math.min(pct, 95));
-
-          if (result.done) {
-            finalResult = {
-              objectPath: result.objectPath ?? objectPath,
-              videoUrl: result.videoUrl ?? videoUrl,
-            };
+        // Step 2: Upload directly to Supabase using standard XMLHttpRequest for progress tracking
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadURL, true);
+          if (uploadToken) {
+            xhr.setRequestHeader("Authorization", `Bearer ${uploadToken}`);
           }
-        }
+          xhr.setRequestHeader("Content-Type", contentType);
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const pct = Math.round((event.loaded / event.total) * 85) + 10;
+              setProgress(pct);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(xhr.responseText);
+            } else {
+              reject(new Error(`Upload échoué: ${xhr.status} ${xhr.responseText}`));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
+          xhr.send(file);
+        });
 
         setProgress(100);
-        const resultToReturn = finalResult ?? { objectPath, videoUrl };
-        options.onSuccess?.(resultToReturn);
-        return resultToReturn;
+        const result = { objectPath, videoUrl };
+        options.onSuccess?.(result);
+        return result;
       } catch (err) {
         const uploadError = err instanceof Error ? err : new Error("Upload échoué");
         setError(uploadError);

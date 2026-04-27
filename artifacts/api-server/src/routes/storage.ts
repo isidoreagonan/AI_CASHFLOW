@@ -30,9 +30,9 @@ router.post("/storage/uploads/request-url", adminMiddleware, async (req: Request
 
   try {
     const { name, size, contentType } = parsed.data;
-    const { uploadURL, objectId, objectPath, videoUrl } = await objectStorageService.getObjectEntityUploadURL();
+    const { uploadURL, token, objectId, objectPath, videoUrl } = await objectStorageService.getObjectEntityUploadURL();
 
-    res.json({ uploadURL, objectId, objectPath, videoUrl, metadata: { name, size, contentType } });
+    res.json({ uploadURL, token, objectId, objectPath, videoUrl, metadata: { name, size, contentType } });
   } catch (error) {
     console.error("Error generating upload URL:", error);
     res.status(500).json({ error: "Failed to generate upload URL" });
