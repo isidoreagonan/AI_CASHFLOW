@@ -25,7 +25,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("Non authentifié");
 
-        const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+        const base = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
         const contentType = file.type || "video/mp4";
 
         // Step 1: Request a signed upload URL from our backend
