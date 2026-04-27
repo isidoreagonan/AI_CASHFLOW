@@ -32,7 +32,7 @@ function resolveVideoUrl(url: string) {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   // Always prepend BASE_URL so paths like /api/storage/... work on deployed app
-  const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+  const base = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
   if (url.startsWith("/")) return `${base}${url}`;
   return `${base}/${url}`;
 }

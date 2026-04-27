@@ -26,7 +26,7 @@ export default function AdminFiles() {
   const queryClient = useQueryClient();
 
   // Fetch all modules across all courses via the dedicated endpoint
-  const API_BASE = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+  const API_BASE = (import.meta.env.VITE_API_URL as string || "").replace(/\/$/, "");
   const { data: allModules = [], isLoading: isModulesLoading } = useQuery<ModuleItem[]>({
     queryKey: ["/api/modules"],
     queryFn: async () => {

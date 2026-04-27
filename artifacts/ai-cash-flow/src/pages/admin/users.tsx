@@ -34,7 +34,7 @@ type UserProgress = {
   course: { id: number; title: string };
 };
 
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export default function AdminUsers() {
   const { data: users, isLoading } = useListUsers();
