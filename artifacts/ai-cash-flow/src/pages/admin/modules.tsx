@@ -491,7 +491,7 @@ function LessonList({ moduleId }: { moduleId: number }) {
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                       <span className="text-sm text-muted-foreground truncate">Vidéo existante liée</span>
                     </div>
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => fileInputRef.current?.click()}>
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => fileInputRef.current?.click()}>
                       Remplacer
                     </Button>
                   </div>
@@ -534,7 +534,7 @@ function LessonList({ moduleId }: { moduleId: number }) {
                         </div>
                         {!isUploading && lessonForm.videoUrl && <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />}
                         {!isUploading && !lessonForm.videoUrl && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setUploadedFileName(null); clearPreview(); setLessonForm(prev => ({ ...prev, videoUrl: "" })); }}>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setUploadedFileName(null); clearPreview(); setLessonForm(prev => ({ ...prev, videoUrl: "" })); }}>
                             <X className="w-3 h-3" />
                           </Button>
                         )}
@@ -553,7 +553,7 @@ function LessonList({ moduleId }: { moduleId: number }) {
                       {lessonForm.videoUrl && !isUploading && <p className="text-xs text-emerald-600 font-medium">✓ Vidéo uploadée et prête</p>}
                       {uploadError && <p className="text-xs text-destructive">{uploadError.message}</p>}
                       {!isUploading && (
-                        <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => { setUploadedFileName(null); clearPreview(); setLessonForm(prev => ({ ...prev, videoUrl: "" })); setTimeout(() => fileInputRef.current?.click(), 50); }}>
+                        <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => { setUploadedFileName(null); clearPreview(); setLessonForm(prev => ({ ...prev, videoUrl: "" })); setTimeout(() => fileInputRef.current?.click(), 50); }}>
                           Changer de fichier
                         </Button>
                       )}
