@@ -543,7 +543,7 @@ function LessonList({ moduleId }: { moduleId: number }) {
                         <div className="space-y-1.5">
                           <Progress value={progress} className="h-2" />
                           <p className="text-xs text-muted-foreground text-center">
-                            {progress < 20 ? "Préparation..." : progress < 95 ? `Upload en cours… ${progress}%` : "Finalisation…"}
+                            {progress < 5 ? "Préparation..." : progress < 99 ? `Upload en cours… ${progress}%` : "Finalisation…"}
                           </p>
                           <p className="text-[11px] text-muted-foreground text-center opacity-70">
                             Garde l'écran allumé — l'upload continue en arrière-plan
