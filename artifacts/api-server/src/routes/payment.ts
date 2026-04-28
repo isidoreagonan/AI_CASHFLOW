@@ -6,8 +6,8 @@ import { authMiddleware } from "../lib/auth";
 
 const router = Router();
 
-const PAWAPAY_TOKEN = process.env.PAWAPAY_API_TOKEN!;
-const PAWAPAY_BASE = "https://api.pawapay.io";
+const PAWAPAY_TOKEN = process.env.PAWAPAY_API_TOKEN || "";
+const PAWAPAY_BASE = process.env.PAWAPAY_API_URL || "https://api.pawapay.io";
 const AMOUNT = 10000;
 
 // Map of supported countries (XOF/XAF = FCFA regions)
@@ -80,7 +80,7 @@ router.post("/initiate", authMiddleware, async (req, res) => {
   };
 
   try {
-    const response = await fetch(`${PAWAPAY_BASE}/deposits`, {
+    const response = await fetch(`${PAWAPAY_BASE}/v1/deposits`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${PAWAPAY_TOKEN}`,
@@ -89,12 +89,20 @@ router.post("/initiate", authMiddleware, async (req, res) => {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json() as any;
+    let data;
+    try {
+      data = await response.json();
+    } catch (e) {
+      const text = await response.text();
+      console.error("PawaPay API returned non-JSON response:", text);
+      res.status(500).json({ error: "Erreur de communication avec PawaPay" });
+      return;
+    }
 
     if (!response.ok || (data.status !== "ACCEPTED" && data.status !== "DUPLICATE_IGNORED")) {
-      console.error("PawaPay deposit error:", JSON.stringify(data));
+      console.error(`PawaPay deposit error HTTP ${response.status}:`, JSON.stringify(data));
       res.status(400).json({
-        error: data.rejectionReason?.rejectionMessage || data.errorMessage || "Paiement rejeté par l'opérateur",
+        error: data.rejectionReason?.rejectionMessage || data.errorMessage || data.message || "Paiement rejeté par l'opérateur",
         details: data,
       });
       return;
@@ -130,7 +138,7 @@ router.get("/status/:depositId", authMiddleware, async (req, res) => {
   const user = (req as any).user;
 
   try {
-    const response = await fetch(`${PAWAPAY_BASE}/deposits/${depositId}`, {
+    const response = await fetch(`${PAWAPAY_BASE}/v1/deposits/${depositId}`, {
       headers: { "Authorization": `Bearer ${PAWAPAY_TOKEN}` },
     });
 
