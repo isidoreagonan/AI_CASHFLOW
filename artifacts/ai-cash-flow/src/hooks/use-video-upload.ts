@@ -43,16 +43,13 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
           throw new Error(err.error || "Impossible de démarrer l'upload");
         }
 
-        const { uploadURL, token: uploadToken, objectPath, videoUrl } = await reqRes.json();
+        const { uploadURL, objectPath, videoUrl } = await reqRes.json();
         setProgress(10);
 
-        // Step 2: Upload directly to Supabase using standard XMLHttpRequest for progress tracking
+        // Step 2: Upload directly to R2 using standard XMLHttpRequest for progress tracking
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open("PUT", uploadURL, true);
-          if (uploadToken) {
-            xhr.setRequestHeader("Authorization", `Bearer ${uploadToken}`);
-          }
           xhr.setRequestHeader("Content-Type", contentType);
 
           xhr.upload.onprogress = (event) => {

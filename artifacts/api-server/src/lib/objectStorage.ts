@@ -1,101 +1,112 @@
-import { randomUUID } from "crypto";
-
-export class ObjectNotFoundError extends Error {
-  constructor() {
-    super("Object not found");
-    this.name = "ObjectNotFoundError";
-    Object.setPrototypeOf(this, ObjectNotFoundError.prototype);
-  }
-}
-
-let supabaseClient: any = null;
-
-function getSupabase() {
-  if (supabaseClient) return supabaseClient;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    console.warn("SUPABASE_URL or SUPABASE_ANON_KEY missing. Supabase Storage disabled.");
-    const { createClient } = require('@supabase/supabase-js');
-    supabaseClient = createClient('https://dummy.supabase.co', 'dummy');
-    return supabaseClient;
-  }
-  const { createClient } = require('@supabase/supabase-js');
-  supabaseClient = createClient(url, key);
-  return supabaseClient;
-}
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export class ObjectStorageService {
-  constructor() {}
+  private s3Client: S3Client | null = null;
+  private bucketName: string = "";
+  private publicDomain: string = "";
 
-  async getObjectEntityUploadURL(): Promise<{
-    uploadURL: string;
-    token?: string;
-    objectId: string;
-    objectPath: string;
-    videoUrl: string;
-  }> {
-    const supabase = getSupabase();
-    const objectId = randomUUID();
-    const filePath = `uploads/${objectId}`;
+  constructor() {
+    this.init();
+  }
 
-    const { data, error } = await supabase.storage.from('videos').createSignedUploadUrl(filePath);
+  private init() {
+    const accountId = process.env.R2_ACCOUNT_ID;
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+    this.bucketName = process.env.R2_BUCKET_NAME || "videos";
+    this.publicDomain = process.env.R2_PUBLIC_DOMAIN || "";
 
-    if (error || !data) {
-      throw new Error(`Supabase error: ${error?.message || 'Unknown'}`);
+    if (accountId && accessKeyId && secretAccessKey) {
+      this.s3Client = new S3Client({
+        region: "auto",
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      });
+      console.log("Cloudflare R2 Object Storage initialized successfully.");
+    } else {
+      console.warn("Cloudflare R2 Object Storage credentials missing. Videos will not work.");
+    }
+  }
+
+  /**
+   * Retourne une URL pré-signée pour permettre l'upload depuis le frontend
+   */
+  async getObjectEntityUploadURL(): Promise<{ uploadURL: string, objectId: string, objectPath: string, videoUrl: string }> {
+    if (!this.s3Client) {
+      throw new Error("S3 Client not initialized. Please check R2 environment variables.");
     }
 
-    let uploadURL = data.signedUrl;
-    if (uploadURL.startsWith('/')) {
-        uploadURL = `${process.env.SUPABASE_URL}/storage/v1${uploadURL}`;
+    const objectId = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    const objectPath = `${objectId}.mp4`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: objectPath,
+      ContentType: "video/mp4",
+    });
+
+    // Generate a signed URL that expires in 1 hour
+    const uploadURL = await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+    
+    // Format public domain URL properly
+    const cleanDomain = this.publicDomain.replace(/\/$/, "");
+    const videoUrl = `${cleanDomain}/${objectPath}`;
+
+    return { uploadURL, objectId, objectPath, videoUrl };
+  }
+
+  /**
+   * Retourne une URL de lecture pré-signée (si le bucket n'est pas public)
+   */
+  async getObjectSignedReadURL(objectPath: string): Promise<string> {
+    if (!this.s3Client) {
+      throw new Error("S3 Client not initialized.");
     }
 
-    const objectPath = `/objects/uploads/${objectId}`;
-    const videoUrl = `/api/storage/objects/uploads/${objectId}`;
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: objectPath,
+    });
 
-    return { uploadURL, token: data.token, objectId, objectPath, videoUrl };
+    return getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
   }
 
-  async getObjectEntitySignedReadURL(objectPath: string, ttlSec = 3600): Promise<string> {
-    if (!objectPath.startsWith("/objects/")) {
-      throw new ObjectNotFoundError();
-    }
-    const parts = objectPath.slice(1).split("/");
-    if (parts.length < 2) throw new ObjectNotFoundError();
-
-    const filePath = parts.slice(1).join("/");
-    const supabase = getSupabase();
-
-    const { data, error } = await supabase.storage.from('videos').createSignedUrl(filePath, ttlSec);
-
-    if (error || !data) {
-      throw new ObjectNotFoundError();
+  /**
+   * Supprime un objet du stockage
+   */
+  async deleteObject(objectPath: string): Promise<void> {
+    if (!this.s3Client) {
+      throw new Error("S3 Client not initialized.");
     }
 
-    return data.signedUrl;
+    const command = new DeleteObjectCommand({
+      Bucket: this.bucketName,
+      Key: objectPath,
+    });
+
+    await this.s3Client.send(command);
   }
 
-  async configureBucketCors(): Promise<void> {
-    console.log("Supabase bucket CORS should be configured in the Supabase Dashboard.");
-  }
-  
-  // Stubs for legacy routes
-  async searchPublicObject(filePath: string): Promise<any | null> {
-    return null;
-  }
-  
-  async downloadObject(file: any): Promise<Response> {
-    return new Response(null, { status: 404 });
+  // ===== Legacy methods kept for backward compatibility and type safety =====
+  async getUploadWriteStream(contentType: string, totalSize: number): Promise<any> {
+    throw new Error("Deprecated: Use getObjectEntityUploadURL for direct R2 uploads.");
   }
 
-  // Stubs for legacy chunked uploads (no longer used, replaced by direct PUT)
   async startChunkedUpload(contentType: string, totalSize: number): Promise<any> {
-    throw new Error("Deprecated");
+    throw new Error("Deprecated: Use direct upload with R2 signed URLs.");
   }
-  async uploadChunk(sessionId: string, chunk: Buffer, start: number): Promise<any> {
-    throw new Error("Deprecated");
+
+  async uploadChunk(uploadId: string, chunkNumber: number, chunkData: Buffer): Promise<any> {
+    throw new Error("Deprecated.");
   }
-  async getUploadWriteStream(contentType: string): Promise<any> {
-    throw new Error("Deprecated");
+
+  async completeChunkedUpload(uploadId: string): Promise<any> {
+    throw new Error("Deprecated.");
   }
 }
+
+export const objectStorageService = new ObjectStorageService();
