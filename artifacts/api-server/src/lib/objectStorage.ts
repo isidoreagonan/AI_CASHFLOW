@@ -11,11 +11,11 @@ export class ObjectStorageService {
   }
 
   private init() {
-    const accountId = process.env.R2_ACCOUNT_ID;
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-    this.bucketName = process.env.R2_BUCKET_NAME || "videos";
-    this.publicDomain = process.env.R2_PUBLIC_DOMAIN || "";
+    const accountId = (process.env.R2_ACCOUNT_ID || "").trim();
+    const accessKeyId = (process.env.R2_ACCESS_KEY_ID || "").trim();
+    const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || "").trim();
+    this.bucketName = (process.env.R2_BUCKET_NAME || "videos").trim();
+    this.publicDomain = (process.env.R2_PUBLIC_DOMAIN || "").trim();
 
     if (accountId && accessKeyId && secretAccessKey) {
       this.s3Client = new S3Client({
