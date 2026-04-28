@@ -97,6 +97,9 @@ export default function Paiement() {
   const [pollCount, setPollCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Base API URL
+  const base = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
   // Clean phone input (strip non-digits)
   const cleanPhone = (raw: string) => raw.replace(/\D/g, "");
 
@@ -116,7 +119,7 @@ export default function Paiement() {
     if (!msisdn || msisdn.length < 8) return;
     setDetecting(true);
     try {
-      const res = await fetch("/api/payment/predict", {
+      const res = await fetch(`${base}/api/payment/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ msisdn }),
@@ -167,7 +170,7 @@ export default function Paiement() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/payment/initiate", {
+      const res = await fetch(`${base}/api/payment/initiate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -180,10 +183,15 @@ export default function Paiement() {
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error("Invalid JSON response from server");
+      }
 
       if (!res.ok) {
-        toast({ title: "Erreur", description: data.error || "Paiement refusé", variant: "destructive" });
+        toast({ title: "Erreur", description: data?.error || "Paiement refusé", variant: "destructive" });
         setLoading(false);
         return;
       }
@@ -211,7 +219,7 @@ export default function Paiement() {
 
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`/api/payment/status/${id}`, {
+        const res = await fetch(`${base}/api/payment/status/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
