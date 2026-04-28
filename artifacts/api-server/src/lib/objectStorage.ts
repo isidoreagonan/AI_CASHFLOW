@@ -35,7 +35,7 @@ export class ObjectStorageService {
   /**
    * Retourne une URL pré-signée pour permettre l'upload depuis le frontend
    */
-  async getObjectEntityUploadURL(): Promise<{ uploadURL: string, objectId: string, objectPath: string, videoUrl: string }> {
+  async getObjectEntityUploadURL(contentType: string = "video/mp4"): Promise<{ uploadURL: string, objectId: string, objectPath: string, videoUrl: string }> {
     if (!this.s3Client) {
       throw new Error("S3 Client not initialized. Please check R2 environment variables.");
     }
@@ -46,7 +46,7 @@ export class ObjectStorageService {
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: objectPath,
-      ContentType: "video/mp4",
+      ContentType: contentType,
     });
 
     // Generate a signed URL that expires in 1 hour

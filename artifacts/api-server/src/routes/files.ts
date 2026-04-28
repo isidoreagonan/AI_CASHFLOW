@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { filesTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, adminMiddleware } from "../lib/auth";
+import { objectStorageService } from "../lib/objectStorage";
 
 const router = Router();
 
@@ -59,6 +60,14 @@ router.delete("/:fileId", adminMiddleware, async (req, res) => {
   if (isNaN(fileId)) {
     res.status(400).json({ error: "Invalid file ID" });
     return;
+  }
+
+  const [file] = await db.select().from(filesTable).where(eq(filesTable.id, fileId));
+  if (file && file.fileUrl.includes("pub-")) {
+    const objectPath = file.fileUrl.split("/").pop();
+    if (objectPath) {
+      objectStorageService.deleteObject(objectPath).catch(err => console.error("Failed to delete file:", err));
+    }
   }
 
   await db.delete(filesTable).where(eq(filesTable.id, fileId));

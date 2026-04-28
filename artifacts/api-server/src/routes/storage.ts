@@ -30,7 +30,7 @@ router.post("/storage/uploads/request-url", adminMiddleware, async (req: Request
 
   try {
     const { name, size, contentType } = parsed.data;
-    const { uploadURL, objectId, objectPath, videoUrl } = await objectStorageService.getObjectEntityUploadURL();
+    const { uploadURL, objectId, objectPath, videoUrl } = await objectStorageService.getObjectEntityUploadURL(contentType);
 
     res.json({ uploadURL, objectId, objectPath, videoUrl, metadata: { name, size, contentType } });
   } catch (error) {
