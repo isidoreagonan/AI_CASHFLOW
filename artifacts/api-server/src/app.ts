@@ -8,7 +8,7 @@ import { ObjectStorageService } from "./lib/objectStorage";
 const app: Express = express();
 
 // Configure GCS bucket CORS on startup so mobile browsers can upload directly
-new ObjectStorageService().configureBucketCors().catch(() => {});
+// Configuration CORS Cloudflare R2 doit être faite via le tableau de bord Cloudflare
 
 app.use(
   pinoHttp({
