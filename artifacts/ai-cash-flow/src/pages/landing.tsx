@@ -1160,29 +1160,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════
-          FOOTER
-          ════════════════════════════════════════════════ */}
-      <footer className="py-12 bg-foreground text-background">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-            <div className="flex items-center gap-2">
-              <img src={logoImg} alt="IA Cash Flow" className="h-10 w-10 rounded-full object-cover" />
-              <span className="font-black text-lg">IA CASH FLOW</span>
-            </div>
-            <div className="flex gap-6 text-sm text-background/60">
-              <a href="#" className="hover:text-background transition-colors">Mentions légales</a>
-              <a href="#" className="hover:text-background transition-colors">CGV</a>
-              <a href="#" className="hover:text-background transition-colors">Confidentialité</a>
-              <a href="#" className="hover:text-background transition-colors">Contact</a>
-            </div>
-          </div>
-          <div className="border-t border-background/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-background/50">
-            <p>&copy; {new Date().getFullYear()} AI Cash Flow. Tous droits réservés.</p>
-            <p>Fait avec passion pour les créateurs ambitieux</p>
-          </div>
-        </div>
-      </footer>
+
 
       {/* ════════════════════════════════════════════════
           FLOATING WHATSAPP BUTTON

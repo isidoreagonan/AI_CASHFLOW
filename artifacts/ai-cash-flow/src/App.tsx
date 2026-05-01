@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/footer";
 import { AdminLayout } from "@/components/admin-layout";
 import { ProtectedRoute, AdminRoute } from "@/components/auth-routes";
 import NotFound from "@/pages/not-found";
@@ -22,6 +23,9 @@ import Files from "@/pages/files";
 import Paiement from "@/pages/paiement";
 import ConfigurerCompte from "@/pages/configurer-compte";
 import MotDePasseOublie from "@/pages/mot-de-passe-oublie";
+import MentionsLegales from "@/pages/mentions-legales";
+import CGV from "@/pages/cgv";
+import PolitiqueConfidentialite from "@/pages/politique-confidentialite";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -82,6 +86,9 @@ function AppContent() {
           <Route path="/paiement" component={Paiement} />
           <Route path="/configurer-compte" component={ConfigurerCompte} />
           <Route path="/mot-de-passe-oublie" component={MotDePasseOublie} />
+          <Route path="/mentions-legales" component={MentionsLegales} />
+          <Route path="/cgv" component={CGV} />
+          <Route path="/politique-confidentialite" component={PolitiqueConfidentialite} />
 
           <Route path="/dashboard">
             <ProtectedRoute><Dashboard /></ProtectedRoute>
@@ -102,6 +109,7 @@ function AppContent() {
           <Route component={NotFound} />
         </Switch>
       </main>
+      {!isAdmin && <Footer />}
     </div>
   );
 }
