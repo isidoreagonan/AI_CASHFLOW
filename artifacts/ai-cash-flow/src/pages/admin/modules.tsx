@@ -33,6 +33,7 @@ import { Loader2, Plus, Edit2, Trash2, ArrowLeft, Video, Music, Upload, Globe, L
 const VIDEO_TYPES = [
   { value: "youtube", label: "Lien YouTube", icon: Globe, color: "text-red-500", hint: "Colle le lien YouTube (ex: https://youtube.com/watch?v=...)" },
   { value: "vimeo", label: "Lien Vimeo", icon: Link2, color: "text-blue-500", hint: "Colle le lien Vimeo de ta vidéo" },
+  { value: "gdrive", label: "Lien Google Drive", icon: Globe, color: "text-blue-400", hint: "Colle le lien Google Drive (ex: https://drive.google.com/file/d/...)" },
   { value: "upload", label: "Upload depuis PC / Téléphone", icon: Upload, color: "text-violet-500", hint: "Uploade une vidéo directement depuis ton appareil" },
   { value: "audio", label: "Fichier Audio", icon: Music, color: "text-amber-500", hint: "URL vers ton fichier audio (MP3, WAV...)" },
   { value: "embed", label: "Embed / Autre", icon: Video, color: "text-emerald-500", hint: "URL ou code embed d'une autre plateforme" },
@@ -331,11 +332,17 @@ function LessonList({ moduleId }: { moduleId: number }) {
 
   const handleOpenEdit = (lesson: any) => {
     setEditingLesson(lesson);
+    
+    let formType = lesson.videoType;
+    if (lesson.videoType === "embed" && lesson.videoUrl.includes("drive.google.com")) {
+      formType = "gdrive";
+    }
+    
     setLessonForm({
       title: lesson.title,
       description: lesson.description || "",
       videoUrl: lesson.videoUrl,
-      videoType: lesson.videoType,
+      videoType: formType,
       duration: lesson.duration,
       order: lesson.order,
       isFree: lesson.isFree,
@@ -351,12 +358,27 @@ function LessonList({ moduleId }: { moduleId: number }) {
       toast({ title: "Attends la fin de l'upload vidéo avant de sauvegarder", variant: "destructive" });
       return;
     }
+    
+    // Prepare data for backend
+    const submitData = { ...lessonForm };
+    
+    // Map Google Drive to 'embed' and rewrite to preview URL
+    if (submitData.videoType === "gdrive") {
+      submitData.videoType = "embed" as any;
+      const idMatch = submitData.videoUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      const idMatch2 = submitData.videoUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      const id = idMatch ? idMatch[1] : idMatch2 ? idMatch2[1] : null;
+      if (id) {
+        submitData.videoUrl = `https://drive.google.com/file/d/${id}/preview`;
+      }
+    }
+
     try {
       if (editingLesson) {
-        await updateLesson.mutateAsync({ lessonId: editingLesson.id, data: lessonForm });
+        await updateLesson.mutateAsync({ lessonId: editingLesson.id, data: submitData });
         toast({ title: "Leçon mise à jour ✓" });
       } else {
-        await createLesson.mutateAsync({ moduleId, data: lessonForm });
+        await createLesson.mutateAsync({ moduleId, data: submitData });
         toast({ title: "Leçon créée ✓" });
       }
       queryClient.invalidateQueries({ queryKey: getListLessonsQueryKey(moduleId) });

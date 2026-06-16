@@ -24,6 +24,14 @@ function extractVideoId(url: string, type: string) {
     const regExp = /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_\-]+)?/i;
     const match = url.match(regExp);
     return match ? match[1] : null;
+  } else if (type === "gdrive") {
+    const regExp = /\/file\/d\/([a-zA-Z0-9_-]+)/;
+    const match = url.match(regExp);
+    if (match) return match[1];
+    
+    const idRegExp = /[?&]id=([a-zA-Z0-9_-]+)/;
+    const idMatch = url.match(idRegExp);
+    return idMatch ? idMatch[1] : null;
   }
   return null;
 }
@@ -147,6 +155,18 @@ export default function LessonPlayer() {
           src={`https://player.vimeo.com/video/${id}?autoplay=0`}
           title={lesson.title}
           allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      );
+    } else if (lesson.videoType === "gdrive") {
+      const id = extractVideoId(lesson.videoUrl, "gdrive");
+      if (!id) return <VideoError msg="Lien Google Drive invalide." />;
+      return (
+        <iframe
+          className="w-full h-full absolute inset-0"
+          src={`https://drive.google.com/file/d/${id}/preview`}
+          title={lesson.title}
+          allow="autoplay; fullscreen"
           allowFullScreen
         />
       );
